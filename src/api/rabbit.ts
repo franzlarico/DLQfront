@@ -1,6 +1,19 @@
-import type { InspectedMessage, QueueInfo, RabbitConfig, RequeueResult } from '../types';
+import type {
+  ActivityItem,
+  DashboardSummary,
+  DashboardWindow,
+  ExceptionSummaryItem,
+  HealthResponse,
+  InspectedMessage,
+  QueueDistributionItem,
+  QueueInfo,
+  QueueListItem,
+  RabbitConfig,
+  RequeueJobDetails,
+  RequeueResult,
+} from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001';
 
 interface RequeuePayload {
   limit: number;
@@ -8,13 +21,21 @@ interface RequeuePayload {
   targetRoutingKey?: string;
 }
 
+interface RequeueJobPayload extends RequeuePayload {
+  sourceQueue: string;
+  requestedBy?: string;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
+  const requestId = globalThis.crypto?.randomUUID?.() ?? `web-${Date.now()}`;
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
+        Accept: 'application/json',
         'Content-Type': 'application/json',
+        'x-request-id': requestId,
         ...(init?.headers ?? {}),
       },
       ...init,
@@ -42,6 +63,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(message);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
@@ -50,6 +75,10 @@ export const rabbitApi = {
 
   getConfig(): Promise<RabbitConfig> {
     return request<RabbitConfig>('/rabbit/config');
+  },
+
+  listQueues(): Promise<QueueListItem[]> {
+    return request<QueueListItem[]>('/rabbit/queues');
   },
 
   getQueueInfo(queue: string): Promise<QueueInfo> {
@@ -67,5 +96,57 @@ export const rabbitApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+
+  createRequeueJob(payload: RequeueJobPayload): Promise<RequeueJobDetails> {
+    return request<RequeueJobDetails>('/requeue/jobs', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getRequeueJob(id: string): Promise<RequeueJobDetails> {
+    return request<RequeueJobDetails>(`/requeue/jobs/${encodeURIComponent(id)}`);
+  },
+
+  getDashboardSummary(window: DashboardWindow): Promise<DashboardSummary> {
+    return request<DashboardSummary>(`/dashboard/summary?window=${encodeURIComponent(window)}`);
+  },
+
+  getDashboardQueues(window: DashboardWindow): Promise<QueueDistributionItem[]> {
+    return request<QueueDistributionItem[]>(`/dashboard/queues?window=${encodeURIComponent(window)}`);
+  },
+
+  getDashboardExceptions(window: DashboardWindow): Promise<ExceptionSummaryItem[]> {
+    return request<ExceptionSummaryItem[]>(`/dashboard/exceptions?window=${encodeURIComponent(window)}`);
+  },
+
+  getDashboardActivity(window: DashboardWindow, limit = 12): Promise<ActivityItem[]> {
+    return request<ActivityItem[]>(
+      `/dashboard/activity?window=${encodeURIComponent(window)}&limit=${encodeURIComponent(limit)}`,
+    );
+  },
+
+  getHealth(): Promise<HealthResponse> {
+    return request<HealthResponse>('/health');
+  },
+
+  async downloadDashboardExport(window: DashboardWindow, format: 'json' | 'csv'): Promise<Blob> {
+    const requestId = globalThis.crypto?.randomUUID?.() ?? `web-${Date.now()}`;
+    const response = await fetch(
+      `${API_BASE_URL}/dashboard/export?window=${encodeURIComponent(window)}&format=${encodeURIComponent(format)}`,
+      {
+        headers: {
+          Accept: format === 'json' ? 'application/json' : 'text/csv',
+          'x-request-id': requestId,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    return response.blob();
   },
 };
