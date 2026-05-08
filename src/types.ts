@@ -81,49 +81,58 @@ export interface RequeueResult {
   messages: InspectedMessage[];
 }
 
-export type DashboardWindow = 'today' | '24h' | '7d';
+export type DashboardWindow = '24h' | '7d' | '30d' | 'all';
 
 export interface DashboardSummary {
   window: DashboardWindow;
-  totalDeadLetters: number;
-  activeQueues: number;
-  requeuedToday: number;
-  pendingOlderThan24h: number;
-  recoveryRate: number;
-  avgRecoveryMinutes: number;
+  summary: {
+    totalMessages: number;
+    totalRequeued: number;
+    uniqueQueues: number;
+    averageRequeueSize: number;
+  };
 }
 
 export interface QueueDistributionItem {
   queue: string;
-  currentMessages: number;
-  peakMessages: number;
-  trendDelta: number;
-  sharePercent: number;
+  totalMessages: number;
+  requeuedMessages: number;
+  failedOperations: number;
 }
 
 export interface ExceptionSummaryItem {
   reason: string;
   count: number;
-  percentage: number;
-  queue?: string;
-  latestSeenAt?: string;
 }
 
 export interface ActivityItem {
-  id: string;
-  kind: 'message' | 'requeue-job';
-  action: string;
-  queue: string;
-  status: string;
-  fingerprint?: string;
-  detail?: string;
+  _id?: string;
+  eventType: string;
+  sourceQueue: string;
+  targetExchange?: string;
+  targetRoutingKey?: string;
+  messageId?: string;
+  messageSize?: number;
+  messageCount?: number;
+  successCount?: number;
+  status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
+  duration?: number;
+  arrivedAtDlqTime?: string;
   createdAt: string;
+  updatedAt?: string;
+  errorMessage?: string;
+  // Complete message data storage
+  messageBody?: unknown;
+  messageProperties?: Record<string, unknown>;
+  messageHeaders?: Record<string, unknown>;
+  dlqMetadata?: Record<string, unknown>;
+  messageBodyEncoding?: string;
+  originalExchange?: string;
+  originalRoutingKeys?: string[];
 }
 
 export interface HealthResponse {
-  ok: boolean;
-  service: string;
-  timestamp: string;
+  status: 'up' | 'down';
   dependencies: {
     database: DependencyHealth;
     rabbitAmqp: DependencyHealth;
@@ -134,7 +143,6 @@ export interface HealthResponse {
 export interface DependencyHealth {
   status: 'up' | 'down';
   detail?: string;
-  driver?: string;
 }
 
 export interface RequeueJobDetails {
