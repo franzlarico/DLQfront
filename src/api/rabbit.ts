@@ -13,7 +13,7 @@ import type {
   RequeueResult,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
 interface RequeuePayload {
   limit: number;
@@ -128,7 +128,9 @@ export const rabbitApi = {
   },
 
   getHealth(): Promise<HealthResponse> {
-    return request<HealthResponse>('/health');
+    return request<HealthResponse>('/dashboard/health').catch(() =>
+      request<HealthResponse>('/health'),
+    );
   },
 
   async downloadDashboardExport(window: DashboardWindow, format: 'json' | 'csv'): Promise<Blob> {
