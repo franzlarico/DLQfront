@@ -314,7 +314,8 @@ const windowLabel = computed(() => {
                   <span class="arrow">→</span>
                   <span>{{ record.targetExchange || 'N/A' }}</span>
                 </div>
-                <small>{{ record.messageCount || 1 }} mensajes • {{ formatTime(record.createdAt) }}</small>
+                <small>{{ record.messageCount || 1 }} mensajes • Reencolado: {{ formatTime(record.createdAt) }}</small>
+                <small v-if="record.arrivedAtDlqTime" class="arrival-info">Llegada DLQ: {{ formatTime(record.arrivedAtDlqTime) }}</small>
               </div>
             </div>
 
@@ -326,6 +327,8 @@ const windowLabel = computed(() => {
               <div><span class="label">Origen</span><strong>{{ record.sourceQueue }}</strong></div>
               <div><span class="label">Exchange</span><strong>{{ record.targetExchange || '-' }}</strong></div>
               <div><span class="label">Routing Key</span><strong>{{ record.targetRoutingKey || '-' }}</strong></div>
+              <div><span class="label">Reencolado en</span><strong>{{ formatTime(record.createdAt) }}</strong></div>
+              <div v-if="record.arrivedAtDlqTime"><span class="label">Llegada a DLQ</span><strong>{{ formatTime(record.arrivedAtDlqTime) }}</strong></div>
               <div><span class="label">Duración</span><strong>{{ record.duration ? record.duration + 'ms' : 'N/A' }}</strong></div>
               <div><span class="label">Solicitados/Éxito</span><strong>{{ record.messageCount || 0 }}/{{ record.successCount || 0 }}</strong></div>
               <div><span class="label">Tamaño</span><strong>{{ record.messageSize ? (record.messageSize / 1024).toFixed(2) : 0 }}KB</strong></div>
@@ -827,6 +830,13 @@ const windowLabel = computed(() => {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   margin-top: 0;
+}
+
+.arrival-info {
+  color: var(--color-warning) !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  margin-top: var(--spacing-xs) !important;
 }
 
 .chevron {
