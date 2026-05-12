@@ -4,6 +4,7 @@ import type { RabbitConfig } from '../types';
 
 const nacosNamespace = ref<string>('');
 const nacosEnv = ref<string>('');
+const nacosVhost = ref<string>('/');
 const loading = ref(false);
 const error = ref<string | null>(null);
 const currentConfig = ref<RabbitConfig | null>(null);
@@ -18,11 +19,11 @@ async function fetchConfig(): Promise<RabbitConfig | null> {
 	}
 }
 
-async function applyNacos(namespace: string, env: string, timeoutMs = 30000): Promise<RabbitConfig | null> {
+async function applyNacos(namespace: string, env: string, vhost = '/', timeoutMs = 30000): Promise<RabbitConfig | null> {
 	loading.value = true;
 	error.value = null;
 	try {
-		await rabbitService.setNacosConfig(namespace, env);
+		await rabbitService.setNacosConfig(namespace, env, vhost);
 
 		const start = Date.now();
 		while (Date.now() - start < timeoutMs) {
@@ -52,6 +53,7 @@ export function useNacosConfig() {
 	return {
 		nacosNamespace,
 		nacosEnv,
+		nacosVhost,
 		loading,
 		error,
 		currentConfig,

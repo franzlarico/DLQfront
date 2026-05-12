@@ -148,10 +148,10 @@ export const rabbitService = {
   /**
    * Envía namespace y env al backend para que recargue Nacos
    */
-  setNacosConfig(namespace: string, env: string): Promise<void> {
+  setNacosConfig(namespace: string, env: string, vhost?: string): Promise<void> {
     return request<void>('/nacos/reload', {
       method: 'POST',
-      body: JSON.stringify({ namespace, env }),
+      body: JSON.stringify({ namespace, env, vhost }),
     });
   },
 
