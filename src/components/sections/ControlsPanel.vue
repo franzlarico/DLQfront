@@ -34,6 +34,25 @@
           {{ queueName || 'Selecciona una cola...' }}
         </div>
       </div>
+
+      <div class="control-item full">
+        <span class="label-text">NACOS - Namespace</span>
+        <input v-model="localNamespace" placeholder="Ej: 10000365" />
+        <small>Namespace de Nacos que se enviará al backend</small>
+      </div>
+
+      <div class="control-item full">
+        <span class="label-text">NACOS - Env</span>
+        <input v-model="localEnv" placeholder="Ej: QAS" />
+        <small>Ambiente NACOS que se enviará al backend</small>
+      </div>
+
+      <div class="control-item full">
+        <button :disabled="loading" @click="applyNacosConfig">Recargar Nacos</button>
+        <small v-if="error" style="color:var(--color-danger);">{{ error }}</small>
+        <small v-else-if="loading">Procesando recarga...</small>
+        <small v-else-if="success">Recarga completada.</small>
+      </div>
     </div>
   </section>
 </template>
@@ -58,6 +77,24 @@ withDefaults(defineProps<Props>(), {
 });
 
 defineEmits<Emits>();
+import { ref } from 'vue';
+import { useNacosConfig } from '../../composables/useNacosConfig';
+
+const { nacosNamespace, nacosEnv, loading, error, applyNacos, currentConfig } = useNacosConfig();
+
+const localNamespace = ref(nacosNamespace.value || '');
+const localEnv = ref(nacosEnv.value || '');
+const success = ref(false);
+
+async function applyNacosConfig() {
+  success.value = false;
+  const result = await applyNacos(localNamespace.value.trim(), localEnv.value.trim());
+  if (result) {
+    nacosNamespace.value = localNamespace.value.trim();
+    nacosEnv.value = localEnv.value.trim();
+    success.value = true;
+  }
+}
 </script>
 
 <style scoped>

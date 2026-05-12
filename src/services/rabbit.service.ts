@@ -144,6 +144,24 @@ export const rabbitService = {
     );
   },
 
+  // ============= Nacos (admin) =============
+  /**
+   * Envía namespace y env al backend para que recargue Nacos
+   */
+  setNacosConfig(namespace: string, env: string): Promise<void> {
+    return request<void>('/nacos/reload', {
+      method: 'POST',
+      body: JSON.stringify({ namespace, env }),
+    });
+  },
+
+  /**
+   * Consulta el estado de la recarga de Nacos
+   */
+  getNacosStatus(): Promise<{ reloaded: boolean; timestamp?: string }> {
+    return request<{ reloaded: boolean; timestamp?: string }>('/nacos/status');
+  },
+
   async downloadDashboardExport(window: DashboardWindow, format: 'json' | 'csv'): Promise<Blob> {
     const requestId = globalThis.crypto?.randomUUID?.() ?? `web-${Date.now()}`;
     const response = await fetch(

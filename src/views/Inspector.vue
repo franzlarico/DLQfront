@@ -7,6 +7,7 @@ import {
   useRequeue,
   useClipboard,
 } from '../composables';
+import { useNacosConfig } from '../composables/useNacosConfig';
 import { rabbitService } from '../services';
 import { clampInteger } from '../utils';
 import type { RabbitConfig, QueueListItem } from '../types';
@@ -67,6 +68,17 @@ async function loadConfig(): Promise<void> {
     error.value = err instanceof Error ? err.message : String(err);
   }
 }
+
+const { currentConfig } = useNacosConfig();
+watch(
+  () => currentConfig.value,
+  (next) => {
+    if (next) {
+      config.value = next;
+      void syncDetectedQueues();
+    }
+  },
+);
 
 async function syncDetectedQueues(): Promise<void> {
   if (syncingQueues.value || messages.loading.value) return;
