@@ -1,11 +1,11 @@
 <template>
-  <div class="queue-card card" :class="{ active: isActive }" type="button" @click="emit('select')">
+  <button class="queue-card card" :class="{ active: isActive }" type="button" @click="emit('select')">
     <div class="queue-header">
       <strong>{{ queue.name }}</strong>
       <span class="count-badge">{{ queue.messageCount }}</span>
     </div>
     <small>Lista para inspección</small>
-  </div>
+  </button>
 </template>
 
 <script setup lang="ts">

@@ -190,7 +190,7 @@ const windowLabel = computed(() => {
         <div class="health-header">
           <div class="health-status" :class="statusHealth">
             <div class="health-dot" />
-            <span>{{ statusHealth === 'healthy' ? '✓ Sistema Operativo' : '⚠ Conexión Limitada' }}</span>
+            <span>{{ statusHealth === 'healthy' ? '✓ Salud del sistema' : '⚠ Salud degradada' }}</span>
           </div>
         </div>
 
@@ -519,12 +519,298 @@ const windowLabel = computed(() => {
   color: var(--color-danger);
 }
 
-@media (max-width: 768px) {
-  .health-grid {
-    grid-template-columns: 1fr;
+  .metrics-section {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg) var(--spacing-2xl);
+    background: var(--color-bg-primary);
+    border-bottom: 1px solid var(--color-border);
   }
-}
 
+  .metric-card {
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: var(--spacing-lg);
+    background: var(--color-bg-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .metric-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  .metric-label {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-text-secondary);
+  }
+
+  .metric-value {
+    font-size: var(--font-size-3xl, 2rem);
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .metric-unit {
+    margin-left: 0.25rem;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-tertiary);
+  }
+
+  .metric-period {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+  }
+
+  .window-section {
+    padding: var(--spacing-lg) var(--spacing-2xl);
+    background: var(--color-bg-primary);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+  }
+
+  .window-selector {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+  }
+
+  .selector-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+  }
+
+  .window-button {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .window-button.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .activity-section {
+    padding: var(--spacing-lg) var(--spacing-2xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+  }
+
+  .activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+  }
+
+  .activity-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    align-items: center;
+  }
+
+  .filter-group,
+  .sort-group {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .filter-label,
+  .sort-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+  }
+
+  .control-button {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .control-button.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .records-container {
+    display: grid;
+    gap: var(--spacing-md);
+  }
+
+  .audit-record {
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--color-bg-secondary);
+  }
+
+  .record-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: var(--spacing-lg);
+    gap: var(--spacing-lg);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    text-align: left;
+  }
+
+  .record-row:hover {
+    background: var(--color-bg-primary);
+  }
+
+  .record-main {
+    display: grid;
+    gap: var(--spacing-xs);
+    flex: 1;
+  }
+
+  .record-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    width: fit-content;
+  }
+
+  .record-status.success { background: var(--color-success-light); color: var(--color-success); }
+  .record-status.danger { background: var(--color-danger-light); color: var(--color-danger); }
+  .record-status.warning { background: var(--color-warning-light); color: var(--color-warning); }
+
+  .record-info {
+    display: grid;
+    gap: 4px;
+  }
+
+  .record-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .record-title strong {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+  }
+
+  .record-title .arrow {
+    color: var(--color-text-tertiary);
+  }
+
+  .record-row small {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+  }
+
+  .chevron {
+    transition: transform var(--transition-fast);
+  }
+
+  .chevron.rotated {
+    transform: rotate(180deg);
+  }
+
+  .record-details {
+    padding: var(--spacing-lg);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+  }
+
+  .details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-lg);
+  }
+
+  .details-grid .label {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .details-grid strong {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    word-break: break-word;
+    font-weight: 600;
+  }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  .error-msg {
+    padding: var(--spacing-sm);
+    border-radius: 8px;
+    background: var(--color-danger-light);
+    color: var(--color-danger);
+    font-size: var(--font-size-sm);
+    word-break: break-word;
+  }
+
+  @media (max-width: 1024px) {
+    .metrics-section {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .details-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .metrics-section,
+    .health-section,
+    .window-section,
+    .activity-section {
+      padding-left: var(--spacing-md);
+      padding-right: var(--spacing-md);
+    }
+
+    .metrics-section {
+      grid-template-columns: 1fr;
+    }
+  }
 /* Metrics Section */
 .metrics-section {
   display: grid;

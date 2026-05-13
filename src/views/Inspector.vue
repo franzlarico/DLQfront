@@ -33,11 +33,11 @@ const targetExchange = ref('');
 const targetRoutingKey = ref('');
 const config = ref<RabbitConfig | null>(null);
 const error = ref('');
-const queueDiscoveryError = ref('');
 const syncingQueues = ref(false);
 
 // Composables
 const queues = useQueues({ autoSelect: true });
+const queueDiscoveryError = computed(() => queues.error.value);
 const messages = useMessages();
 const { autoRefresh, setAutoRefresh, cleanup: cleanupAutoRefresh } = useAutoRefresh({
   onRefresh: syncDetectedQueues,
