@@ -10,6 +10,9 @@ const dashboardError = ref('');
 const sortBy = ref<'time' | 'queue' | 'status'>('time');
 const filterStatus = ref<'all' | 'success' | 'failed'>('all');
 const expandedRowId = ref<string | null>(null);
+const currentPage = ref(1);
+const pageSize = ref(10);
+const pageSizes = [10, 20, 30, 50] as const;
 
 const health = ref<HealthResponse | null>(null);
 const summary = ref<DashboardSummary | null>(null);
@@ -99,7 +102,12 @@ function toggleRow(rowId: string | undefined): void {
 }
 
 watch(dashboardWindow, () => {
+  currentPage.value = 1;
   void loadDashboard();
+});
+
+watch([filterStatus, sortBy, pageSize], () => {
+  currentPage.value = 1;
 });
 
 onMounted(async () => {
@@ -134,6 +142,55 @@ const filteredRecords = computed(() => {
   }
 
   return records;
+});
+
+const pageCount = computed(() => Math.max(1, Math.ceil(filteredRecords.value.length / pageSize.value)));
+watch(pageCount, (count) => {
+  if (currentPage.value > count) {
+    currentPage.value = count;
+  }
+});
+const currentPageRecords = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize.value;
+  const endIndex = startIndex + pageSize.value;
+  return filteredRecords.value.slice(startIndex, endIndex);
+});
+const displayedRange = computed(() => {
+  const total = filteredRecords.value.length;
+  if (total === 0) {
+    return '0 registros';
+  }
+
+  const start = (currentPage.value - 1) * pageSize.value + 1;
+  const end = Math.min(total, currentPage.value * pageSize.value);
+  return `${start}-${end} de ${total}`;
+});
+
+const visiblePages = computed<(number | null)[]>(() => {
+  const total = pageCount.value;
+  const current = currentPage.value;
+
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, index) => index + 1);
+  }
+
+  const pages: (number | null)[] = [1];
+  if (current > 3) {
+    pages.push(null);
+  }
+
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page);
+  }
+
+  if (current < total - 2) {
+    pages.push(null);
+  }
+
+  pages.push(total);
+  return pages.filter((item, index) => pages.indexOf(item) === index);
 });
 
 const statusHealth = computed(() => {
@@ -270,7 +327,7 @@ const windowLabel = computed(() => {
       <div class="activity-header">
         <div>
           <h2>Historial de Reencolados</h2>
-          <span class="record-count">{{ filteredRecords.length }} registros</span>
+          <span class="record-count">{{ displayedRange }}</span>
         </div>
 
         <div class="activity-controls">
@@ -287,6 +344,13 @@ const windowLabel = computed(() => {
               {{ sort === 'time' ? 'Tiempo' : sort === 'queue' ? 'Cola' : 'Estado' }}
             </button>
           </div>
+
+          <div class="page-size-group">
+            <span class="filter-label">Mostrar:</span>
+            <button v-for="size in pageSizes" :key="size" class="control-button" :class="{ active: pageSize === size }" type="button" @click="pageSize = size">
+              {{ size }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -300,41 +364,63 @@ const windowLabel = computed(() => {
         <span>Sin operaciones en este período</span>
       </div>
 
-      <div v-else class="records-container">
-        <div v-for="record in filteredRecords" :key="record._id" class="audit-record" :class="{ expanded: expandedRowId === record._id }">
-          <button class="record-row" type="button" @click="toggleRow(record._id)">
-            <div class="record-main">
-              <div class="record-status" :class="getStatusColor(record.status)">
-                <span>{{ getStatusLabel(record.status) }}</span>
+      <div v-else class="records-scroll">
+        <div class="records-container">
+          <div v-for="record in currentPageRecords" :key="record._id" class="audit-record" :class="{ expanded: expandedRowId === record._id }">
+            <div class="record-row" role="button" tabindex="0" @click="toggleRow(record._id)">
+              <div class="record-main">
+                <div class="record-status" :class="getStatusColor(record.status)">
+                  <span>{{ getStatusLabel(record.status) }}</span>
+                </div>
+
+                <div class="record-info">
+                  <div class="record-title">
+                    <strong>{{ record.sourceQueue }}</strong>
+                    <span class="arrow">→</span>
+                    <span>{{ record.targetExchange || 'N/A' }}</span>
+                  </div>
+                  <small>{{ record.messageCount || 1 }} mensajes • Reencolado: {{ formatTime(record.createdAt) }}</small>
+                  <small v-if="record.arrivedAtDlqTime" class="arrival-info">Llegada DLQ: {{ formatTime(record.arrivedAtDlqTime) }}</small>
+                </div>
               </div>
 
-              <div class="record-info">
-                <div class="record-title">
-                  <strong>{{ record.sourceQueue }}</strong>
-                  <span class="arrow">→</span>
-                  <span>{{ record.targetExchange || 'N/A' }}</span>
-                </div>
-                <small>{{ record.messageCount || 1 }} mensajes • Reencolado: {{ formatTime(record.createdAt) }}</small>
-                <small v-if="record.arrivedAtDlqTime" class="arrival-info">Llegada DLQ: {{ formatTime(record.arrivedAtDlqTime) }}</small>
-              </div>
+              <ChevronDown class="chevron" :class="{ rotated: expandedRowId === record._id }" :size="18" />
             </div>
 
-            <ChevronDown class="chevron" :class="{ rotated: expandedRowId === record._id }" :size="18" />
-          </button>
-
-          <div v-if="expandedRowId === record._id" class="record-details">
-            <div class="details-grid">
-              <div><span class="label">Origen</span><strong>{{ record.sourceQueue }}</strong></div>
-              <div><span class="label">Exchange</span><strong>{{ record.targetExchange || '-' }}</strong></div>
-              <div><span class="label">Routing Key</span><strong>{{ record.targetRoutingKey || '-' }}</strong></div>
-              <div><span class="label">Reencolado en</span><strong>{{ formatTime(record.createdAt) }}</strong></div>
-              <div v-if="record.arrivedAtDlqTime"><span class="label">Llegada a DLQ</span><strong>{{ formatTime(record.arrivedAtDlqTime) }}</strong></div>
-              <div><span class="label">Duración</span><strong>{{ record.duration ? record.duration + 'ms' : 'N/A' }}</strong></div>
-              <div><span class="label">Solicitados/Éxito</span><strong>{{ record.messageCount || 0 }}/{{ record.successCount || 0 }}</strong></div>
-              <div><span class="label">Tamaño</span><strong>{{ record.messageSize ? (record.messageSize / 1024).toFixed(2) : 0 }}KB</strong></div>
-              <div v-if="record.errorMessage" class="full-width"><span class="label">Error</span><div class="error-msg">{{ record.errorMessage }}</div></div>
+            <div v-if="expandedRowId === record._id" class="record-details">
+              <div class="details-grid">
+                <div><span class="label">Origen</span><strong>{{ record.sourceQueue }}</strong></div>
+                <div><span class="label">Exchange</span><strong>{{ record.targetExchange || '-' }}</strong></div>
+                <div><span class="label">Routing Key</span><strong>{{ record.targetRoutingKey || '-' }}</strong></div>
+                <div><span class="label">Reencolado en</span><strong>{{ formatTime(record.createdAt) }}</strong></div>
+                <div v-if="record.arrivedAtDlqTime"><span class="label">Llegada a DLQ</span><strong>{{ formatTime(record.arrivedAtDlqTime) }}</strong></div>
+                <div><span class="label">Duración</span><strong>{{ record.duration ? record.duration + 'ms' : 'N/A' }}</strong></div>
+                <div><span class="label">Solicitados/Éxito</span><strong>{{ record.messageCount || 0 }}/{{ record.successCount || 0 }}</strong></div>
+                <div><span class="label">Tamaño</span><strong>{{ record.messageSize ? (record.messageSize / 1024).toFixed(2) : 0 }}KB</strong></div>
+                <div v-if="record.errorMessage" class="full-width"><span class="label">Error</span><div class="error-msg">{{ record.errorMessage }}</div></div>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div class="pagination-footer">
+        <div class="pagination-info">Página {{ currentPage }} de {{ pageCount }}</div>
+        <div class="pagination-actions">
+          <button class="pagination-button" type="button" :disabled="currentPage === 1" @click="currentPage = currentPage - 1">Anterior</button>
+          <template v-for="(item, index) in visiblePages" :key="item === null ? `dots-${index}` : `page-${item}`">
+            <span v-if="item === null" class="pagination-ellipsis">…</span>
+            <button
+              v-else
+              class="pagination-button"
+              :class="{ active: currentPage === item }"
+              type="button"
+              @click="currentPage = item"
+            >
+              {{ item }}
+            </button>
+          </template>
+          <button class="pagination-button" type="button" :disabled="currentPage === pageCount" @click="currentPage = currentPage + 1">Siguiente</button>
         </div>
       </div>
     </section>
@@ -662,9 +748,73 @@ const windowLabel = computed(() => {
     border-color: var(--color-primary);
   }
 
+  .records-scroll {
+    max-height: 640px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
   .records-container {
     display: grid;
     gap: var(--spacing-md);
+  }
+
+  .pagination-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) 0 0;
+    border-top: 1px solid var(--color-border);
+    margin-top: var(--spacing-lg);
+  }
+
+  .pagination-info {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+  }
+
+  .pagination-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .pagination-button {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: 999px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: var(--font-size-xs);
+    transition: all var(--transition-fast);
+  }
+
+  .pagination-button:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .pagination-button.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+
+  .pagination-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .pagination-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .audit-record {
